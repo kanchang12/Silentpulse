@@ -1,7 +1,16 @@
 {
   "version": "2.0",
+<<<<<<< HEAD
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
+=======
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true
+      }
+    }
+>>>>>>> 5bbbe549e7c4730d11273edeade1fd4f427a82e4
   }
 }
