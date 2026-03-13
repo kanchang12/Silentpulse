@@ -8,27 +8,75 @@
 <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Segoe UI',sans-serif; background:#0a0a14; color:#fff; height:100vh; display:flex; flex-direction:column; }
-header { background:#12121f; padding:14px 24px; display:flex; align-items:center; gap:16px; border-bottom:1px solid #1e1e3a; }
+body { 
+    font-family:'Segoe UI', sans-serif; 
+    background:#0a0a14; 
+    color:#fff; 
+    height:100vh; 
+    display:flex; 
+    flex-direction:column; 
+    overflow: hidden; /* Prevents double scrollbars */
+}
+
+header { 
+    background:#12121f; 
+    padding:14px 24px; 
+    display:flex; 
+    align-items:center; 
+    gap:16px; 
+    border-bottom:1px solid #1e1e3a; 
+    z-index: 100; /* Keeps header above all map elements */
+}
+
 header h1 { font-size:20px; font-weight:600; }
+
 .pulse { width:12px; height:12px; border-radius:50%; background:#e63946; animation:pulse 1.2s infinite; }
 @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,0.6)} 50%{box-shadow:0 0 0 8px rgba(230,57,70,0)} }
+
 .live-badge { background:#e63946; color:#fff; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; }
-.container { display:flex; flex:1; overflow:hidden; }
-#map { flex:1; }
-.sidebar { width:340px; background:#12121f; border-left:1px solid #1e1e3a; overflow-y:auto; }
+
+.container { 
+    display:flex; 
+    flex:1; 
+    overflow:hidden; 
+    position: relative; /* Context for children */
+}
+
+#map { 
+    flex: 1; 
+    height: 100%; 
+    width: 100%; 
+    position: relative; 
+    z-index: 1; /* Ensures it is behind the sidebar */
+}
+
+.sidebar { 
+    width:340px; 
+    background:#12121f; 
+    border-left:1px solid #1e1e3a; 
+    overflow-y:auto; 
+    z-index: 10; /* Ensures sidebar stays on top of map controls */
+    display: flex;
+    flex-direction: column;
+}
+
 .sidebar-header { padding:16px; border-bottom:1px solid #1e1e3a; font-size:13px; color:#888; text-transform:uppercase; letter-spacing:1px; }
-.alert-card { padding:16px; border-bottom:1px solid #1e1e3a; cursor:pointer; transition:background 0.2s; }
+
+.alert-card { padding:16px; border-bottom:1px solid #1e1e3a; cursor:pointer; transition:background 0.2s; border-left: 3px solid transparent; }
 .alert-card:hover, .alert-card.active { background:#1a1a2e; border-left:3px solid #e63946; }
+
 .alert-name { font-size:15px; font-weight:600; margin-bottom:4px; }
 .alert-address { font-size:12px; color:#888; margin-bottom:6px; }
 .alert-time { font-size:11px; color:#555; }
+
 .severity { display:inline-block; font-size:10px; padding:2px 8px; border-radius:10px; font-weight:700; margin-bottom:6px; background:rgba(230,57,70,0.2); color:#e63946; }
-.stats { display:flex; border-bottom:1px solid #1e1e3a; }
+
+.stats { display:flex; border-bottom:1px solid #1e1e3a; flex-shrink: 0; }
 .stat { flex:1; padding:12px; text-align:center; border-right:1px solid #1e1e3a; }
 .stat:last-child { border-right:none; }
 .stat-num { font-size:22px; font-weight:700; color:#e63946; }
 .stat-label { font-size:10px; color:#555; text-transform:uppercase; letter-spacing:1px; }
+
 .no-alerts { padding:40px 20px; text-align:center; color:#444; font-size:14px; }
 </style>
 </head>
