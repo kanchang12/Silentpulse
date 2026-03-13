@@ -3,12 +3,25 @@ import logging
 import json
 import os
 import requests
+from datetime import datetime, timezone
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 AZURE_MAPS_KEY = os.environ.get("AZURE_MAPS_KEY", "")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 ALERT_EMAIL    = os.environ.get("ALERT_EMAIL", "webtestkan@gmail.com")
+STORAGE_CONN   = os.environ.get("AzureWebJobsStorage", "")
+TABLE_NAME     = "silentpulsealerts"
+
+
+def get_table_client():
+    from azure.data.tables import TableServiceClient
+    service = TableServiceClient.from_connection_string(STORAGE_CONN)
+    try:
+        service.create_table_if_not_exists(TABLE_NAME)
+    except Exception:
+        pass
+    return service.get_table_client(TABLE_NAME)
 
 
 def reverse_geocode(lat, lng):
@@ -29,7 +42,6 @@ def reverse_geocode(lat, lng):
 def send_alert_email(name, phone, address, lat, lng, maps_url, timestamp):
     try:
         if not RESEND_API_KEY:
-            logging.warning("No Resend key")
             return
         requests.post(
             "https://api.resend.com/emails",
@@ -42,9 +54,17 @@ def send_alert_email(name, phone, address, lat, lng, maps_url, timestamp):
             },
             timeout=10
         )
-        logging.info("Email sent")
     except Exception as e:
         logging.error(f"Email failed: {e}")
+
+
+@app.route(route="mapkey", methods=["GET"])
+def mapkey(req: func.HttpRequest) -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps({"key": AZURE_MAPS_KEY}),
+        mimetype="application/json",
+        status_code=200
+    )
 
 
 @app.route(route="agent", methods=["POST"])
@@ -60,13 +80,33 @@ def agent(req: func.HttpRequest) -> func.HttpResponse:
     lat       = body.get("lat", "")
     lng       = body.get("lng", "")
     maps_url  = body.get("maps_url", "")
-    timestamp = body.get("timestamp", "")
+    timestamp = body.get("timestamp", datetime.now(timezone.utc).isoformat())
 
-    address = reverse_geocode(lat, lng)
+    address    = reverse_geocode(lat, lng)
+    assessment = "HIGH severity — immediate response required."
+
     send_alert_email(name, phone, address, lat, lng, maps_url, timestamp)
 
+    row_key = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    try:
+        table = get_table_client()
+        table.upsert_entity({
+            "PartitionKey": "alerts",
+            "RowKey": row_key,
+            "name": name,
+            "phone": phone,
+            "lat": str(lat),
+            "lng": str(lng),
+            "address": address,
+            "maps_url": maps_url,
+            "timestamp": timestamp,
+            "assessment": assessment
+        })
+    except Exception as e:
+        logging.error(f"Storage failed: {e}")
+
     return func.HttpResponse(
-        json.dumps({"status": "processed", "name": name, "address": address}),
+        json.dumps({"status": "processed", "name": name, "address": address, "assessment": assessment}),
         mimetype="application/json",
         status_code=200
     )
@@ -74,8 +114,20 @@ def agent(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.route(route="alerts", methods=["GET"])
 def alerts(req: func.HttpRequest) -> func.HttpResponse:
-    return func.HttpResponse(
-        json.dumps({"alerts": [], "status": "ok"}),
-        mimetype="application/json",
-        status_code=200
-    )
+    try:
+        table = get_table_client()
+        result = [dict(e) for e in table.list_entities()]
+        clean = [{
+            "name": e.get("name",""),
+            "phone": e.get("phone",""),
+            "lat": e.get("lat",""),
+            "lng": e.get("lng",""),
+            "address": e.get("address",""),
+            "maps_url": e.get("maps_url",""),
+            "timestamp": e.get("timestamp",""),
+            "assessment": e.get("assessment","")
+        } for e in result]
+        return func.HttpResponse(json.dumps(clean), mimetype="application/json", status_code=200)
+    except Exception as e:
+        logging.error(f"Get alerts failed: {e}")
+        return func.HttpResponse(json.dumps([]), mimetype="application/json", status_code=200)
