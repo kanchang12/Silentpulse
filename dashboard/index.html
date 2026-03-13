@@ -55,16 +55,28 @@ header h1 { font-size:20px; font-weight:600; }
 const FUNCTION_URL = 'https://silentpulse-agent-dse6e8c7faffcqg8.uksouth-01.azurewebsites.net';
 let map, datasource, alerts = [];
 
+async function getMapKey() {
+  try {
+    const resp = await fetch(FUNCTION_URL + '/api/mapkey');
+    if (!resp.ok) return '';
+    const data = await resp.json();
+    return data.key || '';
+  } catch(e) {
+    return '';
+  }
+}
+
 async function initMap() {
-  const resp = await fetch(FUNCTION_URL + '/api/mapkey');
-  const data = await resp.json();
-  const key = data.key;
+  const key = await getMapKey();
+  const authOptions = key
+    ? { authType: 'subscriptionKey', subscriptionKey: key }
+    : { authType: 'anonymous', clientId: '' };
 
   map = new atlas.Map('map', {
     center: [-1.5, 53.8],
     zoom: 6,
-    style: 'satellite_road_labels',
-    authOptions: { authType: 'subscriptionKey', subscriptionKey: key }
+    style: key ? 'satellite_road_labels' : 'road',
+    authOptions: authOptions
   });
   map.events.add('ready', () => {
     datasource = new atlas.source.DataSource();
@@ -75,11 +87,17 @@ async function initMap() {
     fetchAlerts();
     setInterval(fetchAlerts, 10000);
   });
+  map.events.add('error', (e) => {
+    document.getElementById('last-update').textContent = 'Map error — alerts still loading';
+    fetchAlerts();
+    setInterval(fetchAlerts, 10000);
+  });
 }
 
 async function fetchAlerts() {
   try {
     const resp = await fetch(FUNCTION_URL + '/api/alerts');
+    if (!resp.ok) { document.getElementById('last-update').textContent = 'API error ' + resp.status; return; }
     const data = await resp.json();
     alerts = Array.isArray(data) ? data.sort((a,b) => b.timestamp > a.timestamp ? 1 : -1) : [];
     renderAlerts();
@@ -112,7 +130,7 @@ function renderAlerts() {
 
 function focusAlert(i) {
   const a = alerts[i];
-  if (a.lat && a.lng) map.setCamera({center:[parseFloat(a.lng),parseFloat(a.lat)],zoom:15,type:'fly'});
+  if (a.lat && a.lng && map) map.setCamera({center:[parseFloat(a.lng),parseFloat(a.lat)],zoom:15,type:'fly'});
   document.querySelectorAll('.alert-card').forEach((el,idx) => el.classList.toggle('active',idx===i));
 }
 
