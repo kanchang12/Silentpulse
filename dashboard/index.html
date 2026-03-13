@@ -7,34 +7,29 @@
 <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css">
 <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', sans-serif; background: #0a0a14; color: #fff; height: 100vh; display: flex; flex-direction: column; }
-  header { background: #12121f; padding: 14px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #1e1e3a; }
-  header h1 { font-size: 20px; font-weight: 600; color: #fff; }
-  .pulse { width: 12px; height: 12px; border-radius: 50%; background: #e63946; animation: pulse 1.2s infinite; }
-  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,0.6)} 50%{box-shadow:0 0 0 8px rgba(230,57,70,0)} }
-  .live-badge { background: #e63946; color: #fff; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
-  .container { display: flex; flex: 1; overflow: hidden; }
-  #map { flex: 1; }
-  .sidebar { width: 340px; background: #12121f; border-left: 1px solid #1e1e3a; overflow-y: auto; }
-  .sidebar-header { padding: 16px; border-bottom: 1px solid #1e1e3a; font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-  .alert-card { padding: 16px; border-bottom: 1px solid #1e1e3a; cursor: pointer; transition: background 0.2s; }
-  .alert-card:hover { background: #1a1a2e; }
-  .alert-card.active { background: #1a1a2e; border-left: 3px solid #e63946; }
-  .alert-name { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 4px; }
-  .alert-address { font-size: 12px; color: #888; margin-bottom: 6px; }
-  .alert-time { font-size: 11px; color: #555; }
-  .severity { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 700; margin-bottom: 6px; }
-  .HIGH { background: rgba(230,57,70,0.2); color: #e63946; }
-  .MEDIUM { background: rgba(255,165,0,0.2); color: #ffa500; }
-  .LOW { background: rgba(0,200,100,0.2); color: #00c864; }
-  .assessment { font-size: 11px; color: #aaa; line-height: 1.5; margin-top: 8px; }
-  .no-alerts { padding: 40px 20px; text-align: center; color: #444; font-size: 14px; }
-  .stats { display: flex; gap: 0; border-bottom: 1px solid #1e1e3a; }
-  .stat { flex: 1; padding: 12px; text-align: center; border-right: 1px solid #1e1e3a; }
-  .stat:last-child { border-right: none; }
-  .stat-num { font-size: 22px; font-weight: 700; color: #e63946; }
-  .stat-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:#0a0a14; color:#fff; height:100vh; display:flex; flex-direction:column; }
+header { background:#12121f; padding:14px 24px; display:flex; align-items:center; gap:16px; border-bottom:1px solid #1e1e3a; }
+header h1 { font-size:20px; font-weight:600; }
+.pulse { width:12px; height:12px; border-radius:50%; background:#e63946; animation:pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,0.6)} 50%{box-shadow:0 0 0 8px rgba(230,57,70,0)} }
+.live-badge { background:#e63946; color:#fff; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; }
+.container { display:flex; flex:1; overflow:hidden; }
+#map { flex:1; }
+.sidebar { width:340px; background:#12121f; border-left:1px solid #1e1e3a; overflow-y:auto; }
+.sidebar-header { padding:16px; border-bottom:1px solid #1e1e3a; font-size:13px; color:#888; text-transform:uppercase; letter-spacing:1px; }
+.alert-card { padding:16px; border-bottom:1px solid #1e1e3a; cursor:pointer; transition:background 0.2s; }
+.alert-card:hover, .alert-card.active { background:#1a1a2e; border-left:3px solid #e63946; }
+.alert-name { font-size:15px; font-weight:600; margin-bottom:4px; }
+.alert-address { font-size:12px; color:#888; margin-bottom:6px; }
+.alert-time { font-size:11px; color:#555; }
+.severity { display:inline-block; font-size:10px; padding:2px 8px; border-radius:10px; font-weight:700; margin-bottom:6px; background:rgba(230,57,70,0.2); color:#e63946; }
+.stats { display:flex; border-bottom:1px solid #1e1e3a; }
+.stat { flex:1; padding:12px; text-align:center; border-right:1px solid #1e1e3a; }
+.stat:last-child { border-right:none; }
+.stat-num { font-size:22px; font-weight:700; color:#e63946; }
+.stat-label { font-size:10px; color:#555; text-transform:uppercase; letter-spacing:1px; }
+.no-alerts { padding:40px 20px; text-align:center; color:#444; font-size:14px; }
 </style>
 </head>
 <body>
@@ -42,39 +37,40 @@
   <div class="pulse"></div>
   <h1>SilentPulse</h1>
   <span class="live-badge">LIVE</span>
-  <span style="margin-left:auto;font-size:12px;color:#555" id="last-update">Waiting for alerts...</span>
+  <span style="margin-left:auto;font-size:12px;color:#555" id="last-update">Connecting...</span>
 </header>
 <div class="container">
   <div id="map"></div>
   <div class="sidebar">
     <div class="stats">
       <div class="stat"><div class="stat-num" id="total-count">0</div><div class="stat-label">Total</div></div>
-      <div class="stat"><div class="stat-num" id="high-count" style="color:#e63946">0</div><div class="stat-label">High</div></div>
+      <div class="stat"><div class="stat-num" id="high-count">0</div><div class="stat-label">High</div></div>
       <div class="stat"><div class="stat-num" id="active-count" style="color:#00c864">0</div><div class="stat-label">Active</div></div>
     </div>
     <div class="sidebar-header">Incoming Alerts</div>
     <div id="alert-list"><div class="no-alerts">No alerts yet.<br>Waiting for SOS signals...</div></div>
   </div>
 </div>
-
 <script>
-const AZURE_MAPS_KEY = '';
-const FUNCTION_URL   = 'https://silentpulse-agent-dse6e8c7faffcqg8.uksouth-01.azurewebsites.net';
-
+const FUNCTION_URL = 'https://silentpulse-agent-dse6e8c7faffcqg8.uksouth-01.azurewebsites.net';
 let map, datasource, alerts = [];
 
-function initMap() {
+async function initMap() {
+  const resp = await fetch(FUNCTION_URL + '/api/mapkey');
+  const data = await resp.json();
+  const key = data.key;
+
   map = new atlas.Map('map', {
-    center: [0, 30],
-    zoom: 2,
+    center: [-1.5, 53.8],
+    zoom: 6,
     style: 'satellite_road_labels',
-    authOptions: { authType: 'subscriptionKey', subscriptionKey: AZURE_MAPS_KEY }
+    authOptions: { authType: 'subscriptionKey', subscriptionKey: key }
   });
   map.events.add('ready', () => {
     datasource = new atlas.source.DataSource();
     map.sources.add(datasource);
     map.layers.add(new atlas.layer.SymbolLayer(datasource, null, {
-      iconOptions: { image: 'pin-red', size: 1.2 }
+      iconOptions: { image: 'pin-red', size: 1.4 }
     }));
     fetchAlerts();
     setInterval(fetchAlerts, 10000);
@@ -83,51 +79,41 @@ function initMap() {
 
 async function fetchAlerts() {
   try {
-    const resp = await fetch(`${FUNCTION_URL}/api/alerts`);
+    const resp = await fetch(FUNCTION_URL + '/api/alerts');
     const data = await resp.json();
-    if (data.length !== alerts.length) {
-      alerts = data.sort((a,b) => b.timestamp > a.timestamp ? 1 : -1);
-      renderAlerts();
-      updateStats();
-    }
+    alerts = Array.isArray(data) ? data.sort((a,b) => b.timestamp > a.timestamp ? 1 : -1) : [];
+    renderAlerts();
     document.getElementById('last-update').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-  } catch(e) {}
+  } catch(e) {
+    document.getElementById('last-update').textContent = 'Connection error';
+  }
 }
 
 function renderAlerts() {
-  datasource.clear();
+  if (datasource) datasource.clear();
+  document.getElementById('total-count').textContent = alerts.length;
+  document.getElementById('high-count').textContent = alerts.length;
+  document.getElementById('active-count').textContent = alerts.length;
   const list = document.getElementById('alert-list');
-  if (!alerts.length) { list.innerHTML = '<div class="no-alerts">No alerts yet.</div>'; return; }
-  list.innerHTML = alerts.map((a,i) => {
-    const sev = a.assessment?.includes('HIGH') ? 'HIGH' : a.assessment?.includes('MEDIUM') ? 'MEDIUM' : 'LOW';
-    return `<div class="alert-card" onclick="focusAlert(${i})">
-      <span class="severity ${sev}">${sev}</span>
+  if (!alerts.length) { list.innerHTML = '<div class="no-alerts">No alerts yet.<br>Waiting for SOS signals...</div>'; return; }
+  list.innerHTML = alerts.map((a,i) => `
+    <div class="alert-card" onclick="focusAlert(${i})">
+      <span class="severity">HIGH</span>
       <div class="alert-name">${a.name || 'Unknown'}</div>
       <div class="alert-address">${a.address || a.lat+', '+a.lng}</div>
-      <div class="alert-time">${a.timestamp?.replace('T',' ').split('.')[0] || ''}</div>
-      <div class="assessment">${a.assessment?.substring(0,120) || ''}...</div>
-    </div>`;
-  }).join('');
+      <div class="alert-time">${(a.timestamp||'').replace('T',' ').split('.')[0]}</div>
+    </div>`).join('');
   alerts.forEach(a => {
-    if (a.lat && a.lng) {
-      datasource.add(new atlas.data.Feature(
-        new atlas.data.Point([parseFloat(a.lng), parseFloat(a.lat)]),
-        { name: a.name, address: a.address }
-      ));
+    if (a.lat && a.lng && datasource) {
+      datasource.add(new atlas.data.Feature(new atlas.data.Point([parseFloat(a.lng), parseFloat(a.lat)]), {name: a.name}));
     }
   });
 }
 
 function focusAlert(i) {
   const a = alerts[i];
-  if (a.lat && a.lng) map.setCamera({ center: [parseFloat(a.lng), parseFloat(a.lat)], zoom: 15, type: 'fly' });
-  document.querySelectorAll('.alert-card').forEach((el,idx) => el.classList.toggle('active', idx===i));
-}
-
-function updateStats() {
-  document.getElementById('total-count').textContent = alerts.length;
-  document.getElementById('high-count').textContent = alerts.filter(a => a.assessment?.includes('HIGH')).length;
-  document.getElementById('active-count').textContent = alerts.filter(a => !a.resolved).length;
+  if (a.lat && a.lng) map.setCamera({center:[parseFloat(a.lng),parseFloat(a.lat)],zoom:15,type:'fly'});
+  document.querySelectorAll('.alert-card').forEach((el,idx) => el.classList.toggle('active',idx===i));
 }
 
 initMap();
