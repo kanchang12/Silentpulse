@@ -2,141 +2,251 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SilentPulse — Crisis Response Dashboard</title>
 <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css">
 <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { 
-    font-family:'Segoe UI', sans-serif; 
-    background:#0a0a14; 
-    color:#fff; 
-    height:100vh; 
-    display:flex; 
-    flex-direction:column; 
-    overflow: hidden; /* Prevents double scrollbars */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;800&display=swap');
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  --red: #e63946;
+  --red-dim: rgba(230,57,70,0.15);
+  --bg: #080810;
+  --bg2: #0f0f1c;
+  --bg3: #161628;
+  --border: rgba(255,255,255,0.07);
+  --text: #fff;
+  --muted: #555570;
+  --green: #00e676;
+  --header-h: 56px;
+  --tab-h: 52px;
 }
 
-header { 
-    background:#12121f; 
-    padding:14px 24px; 
-    display:flex; 
-    align-items:center; 
-    gap:16px; 
-    border-bottom:1px solid #1e1e3a; 
-    z-index: 100; /* Keeps header above all map elements */
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; }
+
+/* ── HEADER ── */
+header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: var(--header-h);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; padding: 0 16px;
+}
+.logo { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; }
+.logo span { color: var(--red); }
+.live-pill {
+  background: var(--red); color: #fff; font-size: 9px; font-weight: 600;
+  padding: 2px 7px; border-radius: 20px; letter-spacing: 1px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.pulse-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--red);
+  animation: pulse 1.4s ease-in-out infinite; flex-shrink: 0;
+}
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,.6)} 60%{box-shadow:0 0 0 6px rgba(230,57,70,0)} }
+#last-update { margin-left: auto; font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+/* ── STATS BAR ── */
+.stats-bar {
+  position: fixed; top: var(--header-h); left: 0; right: 0; z-index: 190;
+  display: flex; background: var(--bg2); border-bottom: 1px solid var(--border);
+}
+.stat { flex: 1; padding: 10px 0; text-align: center; border-right: 1px solid var(--border); }
+.stat:last-child { border-right: none; }
+.stat-num { font-size: 20px; font-weight: 800; color: var(--red); line-height: 1; }
+.stat-num.green { color: var(--green); }
+.stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+/* ── TAB BAR (mobile only) ── */
+.tab-bar {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  height: var(--tab-h);
+  background: var(--bg2); border-top: 1px solid var(--border);
+}
+.tab-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px; border: none; background: none;
+  color: var(--muted); cursor: pointer; font-family: 'Syne', sans-serif;
+  font-size: 10px; font-weight: 600; transition: color .2s;
+}
+.tab-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.tab-btn.active { color: var(--red); }
+
+/* ── LAYOUT ── */
+.app {
+  position: fixed;
+  top: calc(var(--header-h) + 41px); /* header + stats */
+  left: 0; right: 0; bottom: 0;
+  display: flex;
 }
 
-header h1 { font-size:20px; font-weight:600; }
+/* ── MAP PANEL ── */
+#map-panel { flex: 1; position: relative; }
+#map { position: absolute; inset: 0; }
 
-.pulse { width:12px; height:12px; border-radius:50%; background:#e63946; animation:pulse 1.2s infinite; }
-@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,0.6)} 50%{box-shadow:0 0 0 8px rgba(230,57,70,0)} }
+/* ── SIDEBAR / ALERTS PANEL ── */
+.sidebar {
+  width: 340px; flex-shrink: 0;
+  background: var(--bg2); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-header {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  font-size: 10px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 1.5px; font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
+}
+#alert-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-.live-badge { background:#e63946; color:#fff; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; }
+/* ── ALERT CARD ── */
+.alert-card {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; border-left: 3px solid transparent;
+  transition: background .15s, border-color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.alert-card:active, .alert-card.active {
+  background: var(--bg3); border-left-color: var(--red);
+}
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.alert-name { font-size: 14px; font-weight: 700; }
+.severity-pill {
+  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+  background: var(--red-dim); color: var(--red); flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;
+}
+.alert-address { font-size: 11px; color: #888; margin-bottom: 4px; line-height: 1.4; }
+.card-bottom { display: flex; justify-content: space-between; align-items: center; }
+.alert-time { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.maps-link {
+  font-size: 10px; color: var(--red); text-decoration: none; font-weight: 600;
+  display: flex; align-items: center; gap: 3px;
+}
+.maps-link svg { width: 10px; height: 10px; fill: currentColor; }
 
-.container { 
-    display:flex; 
-    flex:1; 
-    overflow:hidden; 
-    position: relative; /* Context for children */
+/* ── ASSESSMENT PANEL ── */
+.assessment {
+  font-size: 11px; color: #aaa; line-height: 1.5; padding: 10px 12px;
+  background: rgba(230,57,70,0.05); border-radius: 6px; margin-top: 8px;
+  border: 1px solid rgba(230,57,70,0.1);
+}
+.assessment-label { font-size: 9px; color: var(--red); font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+
+.no-alerts {
+  padding: 48px 24px; text-align: center; color: var(--muted);
+  font-size: 13px; line-height: 1.7;
+}
+.no-alerts-icon { font-size: 32px; margin-bottom: 12px; opacity: .3; }
+
+/* ── MOBILE STYLES ── */
+@media (max-width: 768px) {
+  .tab-bar { display: flex; }
+  .sidebar { display: none; width: 100%; border-left: none; }
+  .sidebar.mobile-active { display: flex; position: absolute; inset: 0; z-index: 100; }
+  #map-panel.mobile-hidden { display: none; }
+  .app { bottom: var(--tab-h); }
+  #last-update { display: none; }
+  .logo { font-size: 15px; }
 }
 
-#map { 
-    flex: 1; 
-    height: 100%; 
-    width: 100%; 
-    position: relative; 
-    z-index: 1; /* Ensures it is behind the sidebar */
+@media (min-width: 769px) {
+  .tab-bar { display: none !important; }
+  .sidebar { display: flex !important; }
+  #map-panel { display: block !important; }
 }
 
-.sidebar { 
-    width:340px; 
-    background:#12121f; 
-    border-left:1px solid #1e1e3a; 
-    overflow-y:auto; 
-    z-index: 10; /* Ensures sidebar stays on top of map controls */
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar-header { padding:16px; border-bottom:1px solid #1e1e3a; font-size:13px; color:#888; text-transform:uppercase; letter-spacing:1px; }
-
-.alert-card { padding:16px; border-bottom:1px solid #1e1e3a; cursor:pointer; transition:background 0.2s; border-left: 3px solid transparent; }
-.alert-card:hover, .alert-card.active { background:#1a1a2e; border-left:3px solid #e63946; }
-
-.alert-name { font-size:15px; font-weight:600; margin-bottom:4px; }
-.alert-address { font-size:12px; color:#888; margin-bottom:6px; }
-.alert-time { font-size:11px; color:#555; }
-
-.severity { display:inline-block; font-size:10px; padding:2px 8px; border-radius:10px; font-weight:700; margin-bottom:6px; background:rgba(230,57,70,0.2); color:#e63946; }
-
-.stats { display:flex; border-bottom:1px solid #1e1e3a; flex-shrink: 0; }
-.stat { flex:1; padding:12px; text-align:center; border-right:1px solid #1e1e3a; }
-.stat:last-child { border-right:none; }
-.stat-num { font-size:22px; font-weight:700; color:#e63946; }
-.stat-label { font-size:10px; color:#555; text-transform:uppercase; letter-spacing:1px; }
-
-.no-alerts { padding:40px 20px; text-align:center; color:#444; font-size:14px; }
+/* ── SCROLLBAR ── */
+#alert-list::-webkit-scrollbar { width: 3px; }
+#alert-list::-webkit-scrollbar-track { background: transparent; }
+#alert-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 </style>
 </head>
 <body>
+
 <header>
-  <div class="pulse"></div>
-  <h1>SilentPulse</h1>
-  <span class="live-badge">LIVE</span>
-  <span style="margin-left:auto;font-size:12px;color:#555" id="last-update">Connecting...</span>
+  <div class="pulse-dot"></div>
+  <div class="logo">Silent<span>Pulse</span></div>
+  <span class="live-pill">LIVE</span>
+  <span id="last-update">Connecting...</span>
 </header>
-<div class="container">
-  <div id="map"></div>
-  <div class="sidebar">
-    <div class="stats">
-      <div class="stat"><div class="stat-num" id="total-count">0</div><div class="stat-label">Total</div></div>
-      <div class="stat"><div class="stat-num" id="high-count">0</div><div class="stat-label">High</div></div>
-      <div class="stat"><div class="stat-num" id="active-count" style="color:#00c864">0</div><div class="stat-label">Active</div></div>
-    </div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num" id="total-count">0</div><div class="stat-label">Total</div></div>
+  <div class="stat"><div class="stat-num" id="high-count">0</div><div class="stat-label">High</div></div>
+  <div class="stat"><div class="stat-num green" id="active-count">0</div><div class="stat-label">Active</div></div>
+</div>
+
+<div class="app">
+  <div id="map-panel">
+    <div id="map"></div>
+  </div>
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-header">Incoming Alerts</div>
-    <div id="alert-list"><div class="no-alerts">No alerts yet.<br>Waiting for SOS signals...</div></div>
+    <div id="alert-list">
+      <div class="no-alerts">
+        <div class="no-alerts-icon">🔴</div>
+        No alerts yet.<br>Waiting for SOS signals...
+      </div>
+    </div>
   </div>
 </div>
+
+<!-- Mobile Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-map" onclick="showTab('map')">
+    <svg viewBox="0 0 24 24"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/><path d="M9 4v13M15 7v13"/></svg>
+    Map
+  </button>
+  <button class="tab-btn" id="tab-alerts" onclick="showTab('alerts')">
+    <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    Alerts
+    <span id="alert-badge" style="display:none;background:var(--red);color:#fff;font-size:8px;padding:1px 5px;border-radius:10px;font-family:'JetBrains Mono',monospace;"></span>
+  </button>
+</div>
+
 <script>
 const FUNCTION_URL = 'https://silentpulse-agent-dse6e8c7faffcqg8.uksouth-01.azurewebsites.net';
-let map, datasource, alerts = [];
+let map, datasource, alerts = [], activeTab = 'map';
+
+function showTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-map').classList.toggle('active', tab === 'map');
+  document.getElementById('tab-alerts').classList.toggle('active', tab === 'alerts');
+  document.getElementById('map-panel').classList.toggle('mobile-hidden', tab !== 'map');
+  document.getElementById('sidebar').classList.toggle('mobile-active', tab === 'alerts');
+}
 
 async function getMapKey() {
   try {
-    const resp = await fetch(FUNCTION_URL + '/api/mapkey');
-    if (!resp.ok) return '';
-    const data = await resp.json();
-    return data.key || '';
-  } catch(e) {
-    return '';
-  }
+    const r = await fetch(FUNCTION_URL + '/api/mapkey');
+    if (!r.ok) return '';
+    const d = await r.json();
+    return d.key || '';
+  } catch { return ''; }
 }
 
 async function initMap() {
   const key = await getMapKey();
-  const authOptions = key
-    ? { authType: 'subscriptionKey', subscriptionKey: key }
-    : { authType: 'anonymous', clientId: '' };
-
   map = new atlas.Map('map', {
-    center: [-1.5, 53.8],
-    zoom: 6,
-    style: key ? 'satellite_road_labels' : 'road',
-    authOptions: authOptions
+    center: [-1.55, 53.8], zoom: 10,
+    style: key ? 'satellite_road_labels' : 'night',
+    authOptions: key
+      ? { authType: 'subscriptionKey', subscriptionKey: key }
+      : { authType: 'anonymous', clientId: '' }
   });
   map.events.add('ready', () => {
     datasource = new atlas.source.DataSource();
     map.sources.add(datasource);
     map.layers.add(new atlas.layer.SymbolLayer(datasource, null, {
-      iconOptions: { image: 'pin-red', size: 1.4 }
+      iconOptions: { image: 'pin-red', size: 1.5, allowOverlap: true }
     }));
     fetchAlerts();
     setInterval(fetchAlerts, 10000);
   });
-  map.events.add('error', (e) => {
-    document.getElementById('last-update').textContent = 'Map error — alerts still loading';
+  map.events.add('error', () => {
     fetchAlerts();
     setInterval(fetchAlerts, 10000);
   });
@@ -144,15 +254,14 @@ async function initMap() {
 
 async function fetchAlerts() {
   try {
-    const resp = await fetch(FUNCTION_URL + '/api/alerts');
-    if (!resp.ok) { document.getElementById('last-update').textContent = 'API error ' + resp.status; return; }
-    const data = await resp.json();
+    const r = await fetch(FUNCTION_URL + '/api/alerts');
+    if (!r.ok) { document.getElementById('last-update').textContent = 'Error ' + r.status; return; }
+    const data = await r.json();
     alerts = Array.isArray(data) ? data.sort((a,b) => b.timestamp > a.timestamp ? 1 : -1) : [];
     renderAlerts();
-    document.getElementById('last-update').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-  } catch(e) {
-    document.getElementById('last-update').textContent = 'Connection error';
-  }
+    const t = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('last-update').textContent = t;
+  } catch { document.getElementById('last-update').textContent = 'Offline'; }
 }
 
 function renderAlerts() {
@@ -160,26 +269,62 @@ function renderAlerts() {
   document.getElementById('total-count').textContent = alerts.length;
   document.getElementById('high-count').textContent = alerts.length;
   document.getElementById('active-count').textContent = alerts.length;
+
+  const badge = document.getElementById('alert-badge');
+  if (alerts.length > 0) { badge.style.display = 'inline'; badge.textContent = alerts.length; }
+  else { badge.style.display = 'none'; }
+
   const list = document.getElementById('alert-list');
-  if (!alerts.length) { list.innerHTML = '<div class="no-alerts">No alerts yet.<br>Waiting for SOS signals...</div>'; return; }
-  list.innerHTML = alerts.map((a,i) => `
-    <div class="alert-card" onclick="focusAlert(${i})">
-      <span class="severity">HIGH</span>
-      <div class="alert-name">${a.name || 'Unknown'}</div>
-      <div class="alert-address">${a.address || a.lat+', '+a.lng}</div>
-      <div class="alert-time">${(a.timestamp||'').replace('T',' ').split('.')[0]}</div>
-    </div>`).join('');
+  if (!alerts.length) {
+    list.innerHTML = '<div class="no-alerts"><div class="no-alerts-icon">🔴</div>No alerts yet.<br>Waiting for SOS signals...</div>';
+    return;
+  }
+
+  list.innerHTML = alerts.map((a, i) => {
+    const time = (a.timestamp || '').replace('T', ' ').split('.')[0];
+    const addr = a.address || (a.lat && a.lng ? `${a.lat}, ${a.lng}` : 'Unknown location');
+    const mapsHref = a.maps_url || (a.lat && a.lng ? `https://maps.google.com/?q=${a.lat},${a.lng}` : '#');
+    const assessment = a.assessment ? `
+      <div class="assessment">
+        <div class="assessment-label">AI Assessment</div>
+        ${a.assessment.substring(0, 200)}${a.assessment.length > 200 ? '...' : ''}
+      </div>` : '';
+    return `
+    <div class="alert-card" onclick="focusAlert(${i})" id="card-${i}">
+      <div class="card-top">
+        <div class="alert-name">${a.name || 'Unknown'}</div>
+        <span class="severity-pill">HIGH</span>
+      </div>
+      <div class="alert-address">${addr}</div>
+      <div class="card-bottom">
+        <div class="alert-time">${time}</div>
+        <a class="maps-link" href="${mapsHref}" target="_blank" onclick="event.stopPropagation()">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          Maps
+        </a>
+      </div>
+      ${assessment}
+    </div>`;
+  }).join('');
+
   alerts.forEach(a => {
     if (a.lat && a.lng && datasource) {
-      datasource.add(new atlas.data.Feature(new atlas.data.Point([parseFloat(a.lng), parseFloat(a.lat)]), {name: a.name}));
+      datasource.add(new atlas.data.Feature(
+        new atlas.data.Point([parseFloat(a.lng), parseFloat(a.lat)]),
+        { name: a.name }
+      ));
     }
   });
 }
 
 function focusAlert(i) {
   const a = alerts[i];
-  if (a.lat && a.lng && map) map.setCamera({center:[parseFloat(a.lng),parseFloat(a.lat)],zoom:15,type:'fly'});
-  document.querySelectorAll('.alert-card').forEach((el,idx) => el.classList.toggle('active',idx===i));
+  document.querySelectorAll('.alert-card').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  if (a.lat && a.lng && map) {
+    map.setCamera({ center: [parseFloat(a.lng), parseFloat(a.lat)], zoom: 15, type: 'fly' });
+  }
+  // On mobile — switch to map tab after selecting alert
+  if (window.innerWidth <= 768) showTab('map');
 }
 
 initMap();
